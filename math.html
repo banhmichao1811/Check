@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bé Vui Học Toán</title>
+    <style>
+        :root {
+            --primary: #FF6B6B;
+            --secondary: #4ECDC4;
+            --accent: #FFE66D;
+            --dark: #2C3E50;
+            --light: #F7F9FC;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        h1 { color: var(--primary); margin-bottom: 10px; }
+        h2 { color: var(--secondary); margin-bottom: 20px; }
+
+        .screen { display: none; }
+        .screen.active { display: block; }
+
+        .btn {
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.1s, background 0.2s;
+            font-weight: bold;
+        }
+
+        .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .btn:active { transform: translateY(0); }
+        .btn-primary { background-color: var(--primary); width: 100%; margin: 10px 0; font-size: 18px; }
+        .btn-outline { background: transparent; border: 2px solid var(--dark); color: var(--dark); }
+        .btn-answer { 
+            background-color: var(--accent); 
+            color: var(--dark); 
+            font-size: 24px; 
+            padding: 20px;
+            width: 100%;
+            height: 80px;
+        }
+
+        .settings-group { margin: 20px 0; text-align: left; }
+        .settings-group label { display: block; margin-bottom: 8px; font-weight: bold; }
+        
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+            font-size: 16px;
+        }
+
+        /* Game UI */
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--dark);
+        }
+
+        .question-box {
+            font-size: 48px;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 30px 0;
+            background: #fff0f0;
+            padding: 20px;
+            border-radius: 15px;
+            border: 3px dashed var(--primary);
+        }
+
+        .answers-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        /* History */
+        .history-list {
+            max-height: 150px;
+            overflow-y: auto;
+            text-align: left;
+            background: #f1f1f1;
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .history-item { border-bottom: 1px solid #ddd; padding: 5px 0; display: flex; justify-content: space-between; }
+
+        .correct { background-color: #4CAF50 !important; color: white !important; }
+        .wrong { background-color: #f44336 !important; color: white !important; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="home-screen" class="screen active">
+        <h1>🧮 Bé Vui Học Toán</h1>
+        <p>Điểm cao nhất: <span id="high-score-display" style="color: var(--primary); font-weight: bold;">0</span></p>
+        
+        <div class="settings-group">
+            <label>Chọn chế độ chơi:</label>
+            <select id="game-mode">
+                <option value="1">⏱️ Chạy đua thời gian (1 phút)</option>
+                <option value="2">🎯 Thử thách 10 câu</option>
+            </select>
+        </div>
+
+        <div class="settings-group">
+            <label>Chọn độ khó:</label>
+            <select id="difficulty">
+                <option value="1">🟢 Cấp 1: Phạm vi dưới 10 (+/-)</option>
+                <option value="2">🟡 Cấp 2: Phạm vi dưới 100 (+/-)</option>
+                <option value="3">🔴 Cấp 3: Nhân (1 chữ số x 2 chữ số)</option>
+            </select>
+        </div>
+
+        <button class="btn btn-primary" onclick="startGame()">Bắt đầu chơi</button>
+        
+        <div style="margin-top: 20px;">
+            <h3>Lịch sử đấu</h3>
+            <div id="history-log" class="history-list">Chưa có dữ liệu</div>
+        </div>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div class="stats-bar">
+            <span id="stat-left">Thời gian: 60s</span>
+            <span id="stat-right">Điểm: 0</span>
+        </div>
+
+        <div id="question" class="question-box">5 + 3 = ?</div>
+
+        <div class="answers-grid" id="answers-area">
+            </div>
+    </div>
+
+    <div id="result-screen" class="screen">
+        <h1>Kết Thúc!</h1>
+        <h2 id="final-message">Bạn làm rất tốt!</h2>
+        
+        <div style="font-size: 20px; margin: 20px 0;">
+            Tổng điểm: <strong id="final-score" style="color: var(--primary); font-size: 40px;">0</strong>
+        </div>
+
+        <button class="btn btn-primary" onclick="showScreen('home-screen')">Về trang chủ</button>
+        <button class="btn btn-outline" onclick="startGame()">Chơi lại ngay</button>
+    </div>
+</div>
+
+<script>
+    // --- CẤU HÌNH VÀ BIẾN TOÀN CỤC ---
+    let currentMode = 1; // 1: Time Attack, 2: 10 Questions
+    let currentDiff = 1;
+    let score = 0;
+    let questionCount = 0;
+    let timeLeft = 60;
+    let timerInterval;
+    let isPlaying = false;
+    let currentAnswer = 0;
+
+    // Tải dữ liệu từ LocalStorage khi mở web
+    window.onload = function() {
+        updateHighScoreDisplay();
+        updateHistoryDisplay();
+    };
+
+    // --- HÀM ĐIỀU HƯỚNG MÀN HÌNH ---
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+        if (screenId === 'home-screen') {
+            updateHighScoreDisplay();
+            updateHistoryDisplay();
+        }
+    }
+
+    // --- LOGIC TRÒ CHƠI ---
+    function startGame() {
+        // Lấy cài đặt
+        currentMode = parseInt(document.getElementById('game-mode').value);
+        currentDiff = parseInt(document.getElementById('difficulty').value);
+
+        // Reset trạng thái
+        score = 0;
+        questionCount = 0;
+        timeLeft = 60;
+        isPlaying = true;
+        
+        updateStats();
+        showScreen('game-screen');
+        nextQuestion();
+
+        // Xử lý chế độ chơi
+        if (timerInterval) clearInterval(timerInterval);
+        
+        if (currentMode === 1) {
+            // Chế độ 1 phút
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateStats();
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+        }
+    }
+
+    function updateStats() {
+        const scoreEl = document.getElementById('stat-right');
+        const leftEl = document.getElementById('stat-left');
+        
+        scoreEl.innerText = `Điểm: ${score}`;
+        
+        if (currentMode === 1) {
+            leftEl.innerText = `Thời gian: ${timeLeft}s`;
+        } else {
+            leftEl.innerText = `Câu: ${questionCount + 1}/10`;
+        }
+    }
+
+    function nextQuestion() {
+        if (!isPlaying) return;
+
+        // Kiểm tra chế độ 10 câu hỏi
+        if (currentMode === 2 && questionCount >= 10) {
+            endGame();
+            return;
+        }
+
+        // Sinh câu hỏi dựa trên độ khó
+        let q = generateMathProblem(currentDiff);
+        currentAnswer = q.answer;
+
+        document.getElementById('question').innerText = q.text;
+
+        // Sinh 4 đáp án (1 đúng, 3 sai)
+        let answers = [currentAnswer];
+        while (answers.length < 4) {
+            let wrong = generateWrongAnswer(currentAnswer, currentDiff);
+            if (!answers.includes(wrong) && wrong >= 0) {
+                answers.push(wrong);
+            }
+        }
+
+        // Xáo trộn đáp án
+        answers.sort(() => Math.random() - 0.5);
+
+        // Hiển thị ra màn hình
+        const answersArea = document.getElementById('answers-area');
+        answersArea.innerHTML = '';
+        answers.forEach(ans => {
+            let btn = document.createElement('button');
+            btn.className = 'btn btn-answer';
+            btn.innerText = ans;
+            btn.onclick = () => checkAnswer(ans, btn);
+            answersArea.appendChild(btn);
+        });
+    }
+
+    function generateMathProblem(level) {
+        let a, b, op, text, ans;
+        const ops = ['+', '-'];
+        
+        if (level === 1) { // Dưới 10
+            op = ops[Math.floor(Math.random() * ops.length)];
+            if (op === '+') {
+                a = Math.floor(Math.random() * 6); // 0-5
+                b = Math.floor(Math.random() * 5); // 0-4
+                ans = a + b; // Max 9
+            } else {
+                a = Math.floor(Math.random() * 10) + 1;
+                b = Math.floor(Math.random() * a); // b < a để không âm
+                ans = a - b;
+            }
+        } else if (level === 2) { // Dưới 100
+            op = ops[Math.floor(Math.random() * ops.length)];
+            if (op === '+') {
+                a = Math.floor(Math.random() * 50); 
+                b = Math.floor(Math.random() * 49);
+                ans = a + b;
+            } else {
+                a = Math.floor(Math.random() * 99) + 1;
+                b = Math.floor(Math.random() * a);
+                ans = a - b;
+            }
+        } else { // Nhân 1 chữ số x 2 chữ số
+            op = '×';
+            a = Math.floor(Math.random() * 8) + 2; // 2 -> 9
+            b = Math.floor(Math.random() * 90) + 10; // 10 -> 99
+            ans = a * b;
+        }
+
+        return {
+            text: `${a} ${op} ${b} = ?`,
+            answer: ans
+        };
+    }
+
+    function generateWrongAnswer(correct, level) {
+        // Tạo đáp án sai nhưng gần đúng để gây nhiễu
+        let range = level === 3 ? 20 : 5;
+        let offset = Math.floor(Math.random() * (range * 2)) - range; 
+        if (offset === 0) offset = 1;
+        return Math.abs(correct + offset);
+    }
+
+    function checkAnswer(val, btnElement) {
+        if (!isPlaying) return;
+
+        const buttons = document.querySelectorAll('.btn-answer');
+        
+        if (val === currentAnswer) {
+            score += (currentMode === 1) ? 1 : 10; // Mode 1: 1đ, Mode 2: 10đ
+            btnElement.classList.add('correct');
+        } else {
+            btnElement.classList.add('wrong');
+            // Hiện đáp án đúng
+            buttons.forEach(b => {
+                if(parseInt(b.innerText) === currentAnswer) b.classList.add('correct');
+            });
+        }
+
+        questionCount++;
+        updateStats();
+
+        // Chờ xíu rồi chuyển câu
+        setTimeout(() => {
+            nextQuestion();
+        }, 300); // 0.3 giây
+    }
+
+    function endGame() {
+        isPlaying = false;
+        clearInterval(timerInterval);
+        
+        document.getElementById('final-score').innerText = score;
+        saveData(score);
+        showScreen('result-screen');
+    }
+
+    // --- LƯU TRỮ DỮ LIỆU ---
+    function saveData(newScore) {
+        // 1. Xử lý điểm cao nhất
+        let currentHigh = parseInt(localStorage.getItem('mathGameHighScore')) || 0;
+        if (newScore > currentHigh) {
+            localStorage.setItem('mathGameHighScore', newScore);
+            document.getElementById('final-message').innerText = "🎉 Chúc mừng! Kỷ lục mới!";
+        } else {
+            document.getElementById('final-message').innerText = "Làm tốt lắm!";
+        }
+
+        // 2. Lưu lịch sử (Lấy cũ, thêm mới, chỉ giữ 10 cái gần nhất)
+        let history = JSON.parse(localStorage.getItem('mathGameHistory')) || [];
+        let now = new Date();
+        let modeName = currentMode === 1 ? "1 Phút" : "10 Câu";
+        let historyItem = {
+            date: now.toLocaleTimeString() + ' ' + now.toLocaleDateString(),
+            mode: modeName,
+            score: newScore
+        };
+        history.unshift(historyItem); // Thêm vào đầu
+        if (history.length > 10) history.pop(); // Xóa bớt nếu quá 10
+        localStorage.setItem('mathGameHistory', JSON.stringify(history));
+    }
+
+    function updateHighScoreDisplay() {
+        let high = localStorage.getItem('mathGameHighScore') || 0;
+        document.getElementById('high-score-display').innerText = high;
+    }
+
+    function updateHistoryDisplay() {
+        let history = JSON.parse(localStorage.getItem('mathGameHistory')) || [];
+        const log = document.getElementById('history-log');
+        
+        if (history.length === 0) {
+            log.innerHTML = "Chưa có dữ liệu";
+            return;
+        }
+
+        let html = '';
+        history.forEach(item => {
+            html += `
+                <div class="history-item">
+                    <span>📅 ${item.date} (${item.mode})</span>
+                    <strong>${item.score} điểm</strong>
+                </div>
+            `;
+        });
+        log.innerHTML = html;
+    }
+</script>
+
+</body>
+</html>
